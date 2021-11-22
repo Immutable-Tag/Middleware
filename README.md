@@ -4,5 +4,5 @@
 npm init -y
 npm install --save express
 npm install --save-dev nodemon
-node index.js
+node index.js or npm start (recommended)
 ```
