@@ -1,80 +1,71 @@
-import {v4 as uuidv4} from "uuid";
+import Web3 from 'web3';
+import { abi, gasLimit, ganacheServer, contractAddress } from "../smartContractConfig/config.js";
 
-let tags = []
-/*
-let tags = [
-    {
-        "repository_url": "https://github.com/airbnb/javascript",
-        "tag_id": "release 1.0",
-        "commit_id": "d8cb40",
-        "id": "a43e33c5-ba77-48ee-8e2f-9fee4d004751",
-        "message": ""
-    }
-]
+let web3 = new Web3(ganacheServer);
+const accounts = await web3.eth.getAccounts();
+let account = accounts[0];
+web3.eth.defaultAccount = account;
+let contract = new web3.eth.Contract(abi, contractAddress, {from: account})
 
- */
 
-export const getTags = (req, res) => {
+export async function createTag(req, res) {
+    let request = req.body
+    let repoUrl = request["repo_url"];
+    let tagId = request["tag_id"];
+    let commitId = request["commit_id"];
 
-    //res.send('Hello')
-    res.send(tags)
+    console.log(`checking if tag ${tagId} exists in the blockchain already for repo ${repoUrl}`);
+    contract.methods.checkTag(repoUrl, tagId)
+        .call({from: account})
+        .then(function (result) {
+            if (result) {
+                console.log(`Tag ${tagId} already exists. Cannot create the same tag.`);
+                res.status(400);
+                res.json({error: "Tag already exists"});
+            }
+            else {
+                console.log("Tag does not exist. Creating tag");
+                contract.methods.createTag(repoUrl, tagId, commitId)
+                    .send({from: account, gas: gasLimit}, function(error, transactionHash) {
+                        if (error) {
+                            console.log(`Failed to create tag. Error: ${error}`);
+                            res.status(500);
+                            res.json({error: "Failed to create tag"});
+                        }
+                        else {
+                            console.log(`Successfully created tag. TransactionHash: ${transactionHash}`);
+                            res.status(201);
+                            res.json({message: "Successfully created tag."});
+                        }
+                    });
+            }
+        });
 }
 
-export const createTag = (req, res) => {
-    const tag = req.body;
-    tags.push({...tag, id: uuidv4()});
-    // Github Integration here.
-    /*
-    githubrepo.open("", "airbnb/javascript", function (err, data) {
-        if (err) throw err;
+export async function getTag(req, res) {
+    let repoUrl = req.body["repo_url"];
+    let tagId = req.params["tagId"];
 
-        // Log results
-        console.log(data);
-    });
-     */
-    res.send(`Tag with the ID ${tag.tag_id} sent to the database for processing.`);
-}
+    console.log("getting tag");
+    contract.methods.getTag(repoUrl, tagId)
+        .call({from: account})
+        .then(function (result) {
+            console.log("got tag");
+            let foundRepoUrl = result.repoURL;
+            let foundTagId = result.tagID;
+            let foundCommitId = result.commitHash;
 
-export const getTag = (req, res) => {
-    //console.log(req.paramsx);
-    //const id = req.params.id;
-    const { id } = req.params;
-
-    const foundTag = tags.find((tag) => tag.id == id);
-    console.log(foundTag)
-    if (!foundTag) {
-        console.log("Tag does not exist in Blockchain.")
-        res.statusCode = 400;
-    } else {
-        console.log("Tag information was successfully retrieved from Blockchain.")
-        res.statusCode = 200;
-    }
-
-    //res.send('The GET ID ROUTE');
-    //res.send(req.params);
-
-    res.send(foundTag);
-}
-
-export const deleteTag = (req, res) => {
-    const { id } = req.params;
-    tags = tags.filter((tag) => tag.id != id);
-    res.send(`User with the id ${id} deleted from database.`)
-
-}
-
-export const updateTag = (req, res) => {
-    const { id } = req.params;
-    const { repository_url, tag_id, commit_id } = req.body;
-
-    const tag = tags.find((tag) => tag.id == id);
-
-    if (repository_url) {
-        tag.repository_url = repository_url;
-    }
-
-    if (tag_id) tag.tag_id = tag_id;
-    if (commit_id) tag.commit_id = commit_id;
-
-    res.send(`Tag with the tag_id ${id} has been updated.`)
+            if (foundCommitId.length == 0) {
+                res.status(404);
+                res.json({error: "Tag does not exist"});
+            }
+            else {
+                res.status(200);
+                res.json({
+                    repo_url: foundRepoUrl,
+                    tag_id: foundTagId,
+                    commit_id: foundCommitId
+                });
+            }
+        });
 }

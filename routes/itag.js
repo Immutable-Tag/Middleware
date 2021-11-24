@@ -1,20 +1,9 @@
 import express from "express";
-import { v4 as uuidv4 } from 'uuid';
-import { createTag, getTags, getTag, deleteTag, updateTag } from "../controllers/itag.js";
-
-uuidv4(); // => sdfsdf324-sdfsfd324-wd23sfd
+import { createTag, getTag } from "../controllers/itag.js";
 
 const router = express.Router();
-
-router.get('/', getTags);
-
-router.post('/', createTag);
-
-router.get('/:id', getTag);
-
-router.delete('/:id', deleteTag);
-
-router.patch('/:id', updateTag);
+router.post('/tags', createTag);
+router.post('/tags/:tagId', getTag);
 
 
 export default router;
