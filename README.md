@@ -44,11 +44,8 @@ Summary
 ## Run the Node.js server
 
 ```bash
-npm init -y (may not need as config json files are already created)
-npm install --save express
-npm install --save-dev nodemon
-npm install web3
-node index.js or npm start (recommended)
+npm install
+npm start
 ```
 
 ## Testing APIs
