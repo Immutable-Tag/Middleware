@@ -1,6 +1,6 @@
 export const gasLimit = 6721975;
 export const ganacheServer = 'http://localhost:8545';
-export const contractAddress = "0x5a66d4bb8bcFbfDa8F62627B3ae6C8F4eDe8E35a";
+export const contractAddress = "0xD987473C8414519528c2b052b469E3C1A8a28722";
 export const abi = [
   {
     "constant": false,
