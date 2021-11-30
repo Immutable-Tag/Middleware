@@ -39,7 +39,13 @@ Summary
 > Final cost:          0.01942118 ETH
 ```
 6. Copy the value of `contract address` (for example, in this case it is `0x5A58B7cAf4609a1c9f7934A0bDBcbeF3B4d27bb8` but it will change every time you run `truffle migrate`).
-7. Paste the copied value in the Middleware repo's `smartContractConfig/config.js` file on line 3.
+7. Paste the copied value in the Middleware repo's `smartContractConfig/config.js` file on line 3 as the value for `contractAddress`.
+
+## Add GitHub token
+
+To create tags in GitHub we need to use a Personal Access Token (PAT) with write permissions.
+
+To create a PAT, go to <https://github.com/settings/tokens> and click the `Generate new token` button. Select all the permissions and click `Generate Token`. Copy the token and paste it in `smartContractConfig/config.js` on the last line as the value for `githubToken`.
 
 ## Run the Node.js server
 

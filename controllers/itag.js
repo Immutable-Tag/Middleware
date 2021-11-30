@@ -1,6 +1,6 @@
 import axios from 'axios';
 import Web3 from 'web3';
-import { abi, gasLimit, ganacheServer, contractAddress } from "../smartContractConfig/config.js";
+import { abi, gasLimit, ganacheServer, contractAddress, githubToken } from "../smartContractConfig/config.js";
 
 let web3 = new Web3(ganacheServer);
 const accounts = await web3.eth.getAccounts();
@@ -33,6 +33,46 @@ async function checkIfCommitExists(repoUrl, commitId) {
     }
 }
 
+async function createTagOnGitHub(repoUrl, tagId, commitId) {
+    let result = repoUrl.split('/') // result = ['https', '', 'github.com', 'Immutable-Tag', 'Middleware']
+    let ownerName = result[result.length - 2]
+    let repoName = result[result.length - 1]
+
+    let url = `https://api.github.com/repos/${ownerName}/${repoName}/git/tags`;
+    try {
+        let body = { tag: tagId, message:"", "object": commitId, "type":"commit"}
+        let response = await axios.post(url, body, {
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'Authorization': `token ${githubToken}`
+            }});
+        if (response.status == 201) {
+            console.log(`Successfully created tag ${tagId} in GitHub repo ${repoUrl}`);
+
+            let url = `https://api.github.com/repos/${ownerName}/${repoName}/git/refs`;
+            let body = { ref: `refs/tags/${tagId}`, sha: commitId}
+            let response = await axios.post(url, body, {
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Authorization': `token ${githubToken}`
+                }});
+            if (response.status == 201) {
+                console.log(`Successfully created ref for tag ${tagId} in GitHub repo ${repoUrl}`);
+                return Promise.resolve(true);
+            }
+
+            console.log(`Could not create ref for tag ${tagId} in GitHub repo ${repoUrl}`);
+            return Promise.resolve(false);
+        }
+
+        console.log(`Could not create tag ${tagId} in GitHub repo ${repoUrl}`);
+        return Promise.resolve(false);
+    } catch (err) {
+        console.log(`Could not create tag ${tagId} in GitHub repo ${repoUrl}: ${err.message}`);
+        return Promise.resolve(false);
+    }
+}
+
 
 export async function createTag(req, res) {
     let request = req.body;
@@ -60,20 +100,30 @@ export async function createTag(req, res) {
                     }
                     else
                     {
-                        console.log(`Found commit ${commitId} in the github repo ${repoUrl}. Creating tag ${tagId} in the blockchain.`);
-                        contract.methods.createTag(repoUrl, tagId, commitId)
-                            .send({from: account, gas: gasLimit}, function(error, transactionHash) {
-                                if (error) {
-                                    console.log(`Failed to create tag ${tagId}. Error: ${error}`);
-                                    res.status(500);
-                                    res.json({error: "Failed to create tag"});
-                                }
-                                else {
-                                    console.log(`Successfully created tag ${tagId}. TransactionHash: ${transactionHash}`);
-                                    res.status(201);
-                                    res.json({message: "Successfully created tag."});
-                                }
-                            });
+                        console.log(`Found commit ${commitId} in the github repo ${repoUrl}. Creating tag ${tagId} in the GitHub repo.`);
+                        createTagOnGitHub(repoUrl, tagId, commitId)
+                        .then(function (tagCreated){
+                            if (!tagCreated) {
+                                console.log(`GitHub could not create the tag ${tagId}. Returning 400 Bad Request`);
+                                res.status(400);
+                                res.json({error: "GitHub could not create the tag"})
+                            }
+                            else {
+                                contract.methods.createTag(repoUrl, tagId, commitId)
+                                    .send({from: account, gas: gasLimit}, function(error, transactionHash) {
+                                        if (error) {
+                                            console.log(`Failed to create tag ${tagId}. Error: ${error}`);
+                                            res.status(500);
+                                            res.json({error: "Failed to create tag"});
+                                        }
+                                        else {
+                                            console.log(`Successfully created tag ${tagId}. TransactionHash: ${transactionHash}`);
+                                            res.status(201);
+                                            res.json({message: "Successfully created tag."});
+                                        }
+                                    });
+                            }
+                        })
                     }
                 });
         }
