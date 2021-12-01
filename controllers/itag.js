@@ -34,6 +34,11 @@ async function checkIfCommitExists(repoUrl, commitId) {
 }
 
 async function createTagOnGitHub(repoUrl, tagId, commitId) {
+    if (githubToken.length == 0) {
+        console.log(`Not creating tag ${tagId} in GitHub repo ${repoUrl}`);
+        return Promise.resolve(true);
+    }
+
     let result = repoUrl.split('/') // result = ['https', '', 'github.com', 'Immutable-Tag', 'Middleware']
     let ownerName = result[result.length - 2]
     let repoName = result[result.length - 1]
