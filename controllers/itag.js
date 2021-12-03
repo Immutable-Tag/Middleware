@@ -1,6 +1,6 @@
 import axios from 'axios';
 import Web3 from 'web3';
-import { abi, gasLimit, ganacheServer, contractAddress, githubToken } from "../smartContractConfig/config.js";
+import { abi, gasLimit, ganacheServer, contractAddress } from "../smartContractConfig/config.js";
 
 let web3 = new Web3(ganacheServer);
 const accounts = await web3.eth.getAccounts();
@@ -33,8 +33,8 @@ async function checkIfCommitExists(repoUrl, commitId) {
     }
 }
 
-async function createTagOnGitHub(repoUrl, tagId, commitId) {
-    if (githubToken.length == 0) {
+async function createTagOnGitHub(repoUrl, tagId, commitId, githubToken) {
+    if (githubToken === undefined || githubToken.length == 0 ) {
         console.log(`Not creating tag ${tagId} in GitHub repo ${repoUrl}`);
         return Promise.resolve(true);
     }
@@ -84,6 +84,7 @@ export async function createTag(req, res) {
     let repoUrl = request["repo_url"];
     let tagId = request["tag_id"];
     let commitId = request["commit_id"];
+    let githubToken = request["github_token"];
 
     console.log(`Checking if tag ${tagId} exists in the blockchain already for repo ${repoUrl}`);
     contract.methods.checkTag(repoUrl, tagId)
@@ -106,7 +107,7 @@ export async function createTag(req, res) {
                     else
                     {
                         console.log(`Found commit ${commitId} in the github repo ${repoUrl}. Creating tag ${tagId} in the GitHub repo.`);
-                        createTagOnGitHub(repoUrl, tagId, commitId)
+                        createTagOnGitHub(repoUrl, tagId, commitId, githubToken)
                         .then(function (tagCreated){
                             if (!tagCreated) {
                                 console.log(`GitHub could not create the tag ${tagId}. Returning 400 Bad Request`);
